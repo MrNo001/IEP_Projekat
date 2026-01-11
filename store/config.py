@@ -29,6 +29,7 @@ class Config:
     PORT = int(_env("PORT", "5002"))
 
     # Feature flags
+    WITH_AUTHENTICATION = _env("WITH_AUTHENTICATION", "1") == "1"
     WITH_BLOCKCHAIN = _env("WITH_BLOCKCHAIN", "0") == "1"
 
     # Blockchain settings (used when WITH_BLOCKCHAIN=1)
