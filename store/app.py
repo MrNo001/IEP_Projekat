@@ -5,6 +5,7 @@ from sqlalchemy import text
 
 from config import Config
 from extensions import db, jwt
+from models import Category, Product, Order, OrderItem  # Import models to register them
 
 
 app = Flask(__name__)
