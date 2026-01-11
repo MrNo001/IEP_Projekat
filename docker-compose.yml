@@ -15,6 +15,22 @@ services:
       retries: 30
     restart: unless-stopped
 
+  store-mysql:
+    image: mysql:8.0.36
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: store_db
+      MYSQL_USER: store_user
+      MYSQL_PASSWORD: store_password
+    volumes:
+      - store_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-prootpassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
   adminer:
     image: adminer:4.8.1
     ports:
@@ -41,6 +57,70 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  owner:
+    build:
+      context: ./store
+    environment:
+      DATABASE_URL: mysql+pymysql://store_user:store_password@store-mysql:3306/store_db
+      JWT_SECRET: JWT_SECRET_DEV_KEY
+      ROLES_FIELD: roles
+      ROLE_OWNER: owner
+      ROLE_CUSTOMER: customer
+      ROLE_COURIER: courier
+      WITH_AUTHENTICATION: "1"
+      WITH_BLOCKCHAIN: "0"
+      SERVICE_MODE: owner
+      PORT: "5001"
+    ports:
+      - "5001:5001"
+    depends_on:
+      store-mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
+  customer:
+    build:
+      context: ./store
+    environment:
+      DATABASE_URL: mysql+pymysql://store_user:store_password@store-mysql:3306/store_db
+      JWT_SECRET: JWT_SECRET_DEV_KEY
+      ROLES_FIELD: roles
+      ROLE_OWNER: owner
+      ROLE_CUSTOMER: customer
+      ROLE_COURIER: courier
+      WITH_AUTHENTICATION: "1"
+      WITH_BLOCKCHAIN: "0"
+      SERVICE_MODE: customer
+      PORT: "5002"
+    ports:
+      - "5002:5002"
+    depends_on:
+      store-mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
+  courier:
+    build:
+      context: ./store
+    environment:
+      DATABASE_URL: mysql+pymysql://store_user:store_password@store-mysql:3306/store_db
+      JWT_SECRET: JWT_SECRET_DEV_KEY
+      ROLES_FIELD: roles
+      ROLE_OWNER: owner
+      ROLE_CUSTOMER: customer
+      ROLE_COURIER: courier
+      WITH_AUTHENTICATION: "1"
+      WITH_BLOCKCHAIN: "0"
+      SERVICE_MODE: courier
+      PORT: "5003"
+    ports:
+      - "5003:5003"
+    depends_on:
+      store-mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   mysql_data:
+  store_mysql_data:
 

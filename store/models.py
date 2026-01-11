@@ -78,7 +78,7 @@ class OrderItem(db.Model):
     order_id = db.Column(db.Integer, db.ForeignKey("orders.id"), nullable=False, index=True)
     product_id = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False, index=True)
     quantity = db.Column(db.Integer, nullable=False)
-    price_at_time = db.Column(db.Numeric(10, 2), nullable=False)  # Price snapshot when order was created
+    price_at_time = db.Column(db.Numeric(10, 2), nullable=False)  
 
     # Relationships
     order = db.relationship("Order", back_populates="items")
