@@ -88,6 +88,29 @@ def health():
     return jsonify({"message": "Authentication service is healthy"}), 200
 
 
+@app.post("/__reset")
+def reset_auth_db():
+    """
+    Dev-only helper: drop and recreate all auth tables, and re-seed the owner.
+    Enabled only when ALLOW_RESET=1. Optional RESET_TOKEN via X-Reset-Token header.
+    """
+    if not Config.ALLOW_RESET:
+        return ("", 404)
+
+    if Config.RESET_TOKEN:
+        if request.headers.get("X-Reset-Token", "") != Config.RESET_TOKEN:
+            return ("", 403)
+
+    with app.app_context():
+        _wait_for_db()
+        db.session.remove()
+        db.drop_all()
+        db.create_all()
+        _seed_owner()
+
+    return ("", 200)
+
+
 def _register(role: str):
     data = request.get_json(silent=True) or {}
 

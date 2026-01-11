@@ -25,6 +25,10 @@ class Config:
     ROLE_CUSTOMER = _env("ROLE_CUSTOMER", "customer")
     ROLE_COURIER = _env("ROLE_COURIER", "courier")
 
+    # Dev/test helpers
+    ALLOW_RESET = _env("ALLOW_RESET", "0") == "1"
+    RESET_TOKEN = _env("RESET_TOKEN", "")
+
     PORT = int(_env("PORT", "5000"))
 
 

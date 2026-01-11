@@ -32,6 +32,10 @@ class Config:
     WITH_AUTHENTICATION = _env("WITH_AUTHENTICATION", "1") == "1"
     WITH_BLOCKCHAIN = _env("WITH_BLOCKCHAIN", "0") == "1"
 
+    # Dev/test helpers
+    ALLOW_RESET = _env("ALLOW_RESET", "0") == "1"
+    RESET_TOKEN = _env("RESET_TOKEN", "")
+
     # Blockchain settings (used when WITH_BLOCKCHAIN=1)
     PROVIDER_URL = _env("PROVIDER_URL", "")
     OWNER_PRIVATE_KEY = _env("OWNER_PRIVATE_KEY", "")

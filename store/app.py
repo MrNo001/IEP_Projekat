@@ -1,6 +1,6 @@
 import time
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from sqlalchemy import text
 
 from config import Config
@@ -48,6 +48,26 @@ def health():
         ),
         200,
     )
+
+@app.post("/__reset")
+def reset_store_db():
+    """
+    Dev-only helper: drop and recreate all store tables.
+    Enabled only when ALLOW_RESET=1. Optional RESET_TOKEN via X-Reset-Token header.
+    """
+    if not Config.ALLOW_RESET:
+        return ("", 404)
+
+    if Config.RESET_TOKEN:
+        if request.headers.get("X-Reset-Token", "") != Config.RESET_TOKEN:
+            return ("", 403)
+
+    with app.app_context():
+        db.session.remove()
+        db.drop_all()
+        db.create_all()
+
+    return ("", 200)
 
 
 def _register_blueprints(app: Flask) -> None:

@@ -50,6 +50,8 @@ services:
       ROLE_OWNER: owner
       ROLE_CUSTOMER: customer
       ROLE_COURIER: courier
+      ALLOW_RESET: "1"
+      RESET_TOKEN: "dev"
     ports:
       - "5000:5000"
     depends_on:
@@ -69,6 +71,8 @@ services:
       ROLE_COURIER: courier
       WITH_AUTHENTICATION: "1"
       WITH_BLOCKCHAIN: "0"
+      ALLOW_RESET: "1"
+      RESET_TOKEN: "dev"
       SERVICE_MODE: owner
       PORT: "5001"
     ports:
@@ -90,6 +94,8 @@ services:
       ROLE_COURIER: courier
       WITH_AUTHENTICATION: "1"
       WITH_BLOCKCHAIN: "0"
+      ALLOW_RESET: "1"
+      RESET_TOKEN: "dev"
       SERVICE_MODE: customer
       PORT: "5002"
     ports:
@@ -111,6 +117,8 @@ services:
       ROLE_COURIER: courier
       WITH_AUTHENTICATION: "1"
       WITH_BLOCKCHAIN: "0"
+      ALLOW_RESET: "1"
+      RESET_TOKEN: "dev"
       SERVICE_MODE: courier
       PORT: "5003"
     ports:
