@@ -1,0 +1,42 @@
+services:
+  ganache:
+    image: trufflesuite/ganache-cli:v6.12.2
+    command:
+      - "--host=0.0.0.0"
+      - "--port=8545"
+      - "--chainId=1337"
+      - "--networkId=1337"
+      - "--gasPrice=1"
+      - "--account=0xb64be88dd6b89facf295f4fd0dda082efcbe95a2bb4478f5ee582b7efe88cf60,1000000000000000000000"
+    ports:
+      - "8545:8545"
+    restart: unless-stopped
+
+  owner:
+    environment:
+      WITH_BLOCKCHAIN: "1"
+      PROVIDER_URL: http://ganache:8545
+      OWNER_PRIVATE_KEY: 0xb64be88dd6b89facf295f4fd0dda082efcbe95a2bb4478f5ee582b7efe88cf60
+    depends_on:
+      ganache:
+        condition: service_started
+
+  customer:
+    environment:
+      WITH_BLOCKCHAIN: "1"
+      PROVIDER_URL: http://ganache:8545
+      OWNER_PRIVATE_KEY: 0xb64be88dd6b89facf295f4fd0dda082efcbe95a2bb4478f5ee582b7efe88cf60
+    depends_on:
+      ganache:
+        condition: service_started
+
+  courier:
+    environment:
+      WITH_BLOCKCHAIN: "1"
+      PROVIDER_URL: http://ganache:8545
+      OWNER_PRIVATE_KEY: 0xb64be88dd6b89facf295f4fd0dda082efcbe95a2bb4478f5ee582b7efe88cf60
+    depends_on:
+      ganache:
+        condition: service_started
+
+

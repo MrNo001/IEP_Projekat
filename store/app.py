@@ -6,7 +6,7 @@ from sqlalchemy import text
 from config import Config
 from auth import register_jwt_error_handlers
 from extensions import db, jwt
-from models import Category, Product, Order, OrderItem  
+from models import BlockchainState, Category, Order, OrderItem, Product  
 from routes.courier import bp as courier_bp
 from routes.customer import bp as customer_bp
 from routes.owner import bp as owner_bp

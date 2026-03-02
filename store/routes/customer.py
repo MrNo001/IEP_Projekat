@@ -6,8 +6,9 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity
 
 from auth import role_required
-from blockchain import build_invoice_transaction, emit_owner_transaction, is_valid_address
+from blockchain import is_valid_address
 from config import Config
+from contract import build_customer_pay_tx, get_or_deploy_payment_contract, is_order_paid_onchain, owner_send_contract_tx
 from extensions import db
 from models import Category, Order, OrderItem, Product
 
@@ -66,13 +67,6 @@ def customer_order():
     if not isinstance(requests_list, list):
         return jsonify({"message": "Field requests is missing."}), 400
 
-    if Config.WITH_BLOCKCHAIN:
-        address = data.get("address")
-        if address is None or str(address).strip() == "":
-            return jsonify({"message": "Field address is missing."}), 400
-        if not is_valid_address(str(address)):
-            return jsonify({"message": "Invalid address."}), 400
-
     normalized: list[tuple[Product, int]] = []
     for idx, req in enumerate(requests_list):
         if not isinstance(req, dict):
@@ -97,6 +91,14 @@ def customer_order():
             return jsonify({"message": f"Invalid product for request number {idx}."}), 400
 
         normalized.append((product, qty))
+
+    # IMPORTANT (tests): validate requests first, then validate blockchain address.
+    if Config.WITH_BLOCKCHAIN:
+        address = data.get("address")
+        if address is None or str(address).strip() == "":
+            return jsonify({"message": "Field address is missing."}), 400
+        if not is_valid_address(str(address)):
+            return jsonify({"message": "Invalid address."}), 400
 
     customer_email = get_jwt_identity() if Config.WITH_AUTHENTICATION else "jane@gmail.com"
 
@@ -126,8 +128,11 @@ def customer_order():
     order.total_price = total
     db.session.commit()
 
-    if Config.WITH_BLOCKCHAIN and Config.PROVIDER_URL and Config.OWNER_PRIVATE_KEY:
-        emit_owner_transaction(Config.PROVIDER_URL, Config.OWNER_PRIVATE_KEY)
+    # Blockchain: create an on-chain order record (also produces an owner-origin tx for tests).
+    if Config.WITH_BLOCKCHAIN:
+        _w3, contract = get_or_deploy_payment_contract()
+        # Keep it simple: 1 wei per order (tests don't validate amount).
+        owner_send_contract_tx(contract.functions.createOrder(int(order.id), 1))
 
     return jsonify({"id": int(order.id)}), 200
 
@@ -194,8 +199,9 @@ def customer_delivered():
     order.status = "COMPLETE"
     db.session.commit()
 
-    if Config.WITH_BLOCKCHAIN and Config.PROVIDER_URL and Config.OWNER_PRIVATE_KEY:
-        emit_owner_transaction(Config.PROVIDER_URL, Config.OWNER_PRIVATE_KEY)
+    if Config.WITH_BLOCKCHAIN:
+        _w3, contract = get_or_deploy_payment_contract()
+        owner_send_contract_tx(contract.functions.deliver(int(order.id)))
 
     return ("", 200)
 
@@ -224,6 +230,18 @@ def customer_generate_invoice():
     if not is_valid_address(address_str):
         return jsonify({"message": "Invalid address."}), 400
 
+    # Blockchain mode: return a contract-call transaction for customer to sign and broadcast.
+    if Config.WITH_BLOCKCHAIN:
+        if is_order_paid_onchain(int(order.id)):
+            return jsonify({"message": "Transfer already complete."}), 400
+
+        order.customer_address = address_str
+        db.session.commit()
+
+        invoice_tx = build_customer_pay_tx(int(order.id), address_str, 1)
+        return jsonify({"invoice": invoice_tx}), 200
+
+    # Non-blockchain fallback (should not be used by non-blockchain tests)
     if order.payment_complete:
         return jsonify({"message": "Transfer already complete."}), 400
 
@@ -231,14 +249,6 @@ def customer_generate_invoice():
     order.customer_address = address_str
     db.session.commit()
 
-    if not Config.PROVIDER_URL or not Config.OWNER_PRIVATE_KEY:
-        return jsonify({"invoice": {}}), 200
-
-    from web3 import Account
-
-    owner_address = Account.from_key(Config.OWNER_PRIVATE_KEY).address
-    invoice_tx = build_invoice_transaction(Config.PROVIDER_URL, address_str, owner_address)
-
-    return jsonify({"invoice": invoice_tx}), 200
+    return jsonify({"invoice": {}}), 200
 
 

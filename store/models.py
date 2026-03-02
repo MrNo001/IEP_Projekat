@@ -87,3 +87,10 @@ class OrderItem(db.Model):
     def __repr__(self):
         return f"<OrderItem order={self.order_id} product={self.product_id} qty={self.quantity}>"
 
+
+class BlockchainState(db.Model):
+    __tablename__ = "blockchain_state"
+
+    id = db.Column(db.Integer, primary_key=True)
+    contract_address = db.Column(db.String(255), nullable=False)
+

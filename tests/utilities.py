@@ -541,7 +541,13 @@ def generate_invoice_equals ( with_blockchain, customer_private_key, provider_ur
         if ( with_blockchain ):
             web3               = Web3 ( HTTPProvider ( provider_url ) )
             signed_transaction = web3.eth.account.sign_transaction ( received_response["invoice"], customer_private_key )
-            transaction_hash   = web3.eth.send_raw_transaction ( signed_transaction.raw_transaction )
+            raw = None
+            if ( hasattr ( signed_transaction, "raw_transaction" ) ):
+                raw = signed_transaction.raw_transaction
+            else:
+                raw = signed_transaction.rawTransaction
+
+            transaction_hash   = web3.eth.send_raw_transaction ( raw )
             receipt            = web3.eth.wait_for_transaction_receipt ( transaction_hash )
     
     return implementation

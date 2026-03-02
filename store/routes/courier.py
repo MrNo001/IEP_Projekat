@@ -3,8 +3,9 @@ from __future__ import annotations
 from flask import Blueprint, jsonify, request
 
 from auth import role_required
-from blockchain import emit_owner_transaction, is_valid_address
+from blockchain import is_valid_address
 from config import Config
+from contract import get_or_deploy_payment_contract, is_order_paid_onchain, owner_send_contract_tx
 from extensions import db
 from models import Order
 
@@ -58,17 +59,18 @@ def pick_up_order():
             return jsonify({"message": "Invalid address."}), 400
 
         # Must be paid first.
-        if not order.payment_complete:
+        if not is_order_paid_onchain(int(order.id)):
             return jsonify({"message": "Transfer not complete."}), 400
 
         order.courier_address = address_str
+        order.payment_complete = True
+
+        # On-chain pickup (also produces an owner-origin tx for tests).
+        _w3, contract = get_or_deploy_payment_contract()
+        owner_send_contract_tx(contract.functions.pickUp(int(order.id), address_str))
 
     order.status = "PENDING"
     db.session.commit()
-
-    # Blockchain: emit an owner-origin tx (tests check latest block)
-    if Config.WITH_BLOCKCHAIN and Config.PROVIDER_URL and Config.OWNER_PRIVATE_KEY:
-        emit_owner_transaction(Config.PROVIDER_URL, Config.OWNER_PRIVATE_KEY)
 
     return ("", 200)
 
