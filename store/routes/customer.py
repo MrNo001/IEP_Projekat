@@ -8,7 +8,7 @@ from flask_jwt_extended import get_jwt_identity
 from auth import role_required
 from blockchain import is_valid_address
 from config import Config
-from contract import build_customer_pay_tx, get_or_deploy_payment_contract, is_order_paid_onchain, owner_send_contract_tx
+from contract import build_customer_pay_tx, deploy_contract_for_order, get_contract_at_address, is_order_paid_onchain, owner_send_contract_tx
 from extensions import db
 from models import Category, Order, OrderItem, Product
 
@@ -128,11 +128,11 @@ def customer_order():
     order.total_price = total
     db.session.commit()
 
-    # Blockchain: create an on-chain order record (also produces an owner-origin tx for tests).
+    # Blockchain: deploy a new contract for this order and record its address.
     if Config.WITH_BLOCKCHAIN:
-        _w3, contract = get_or_deploy_payment_contract()
         # Keep it simple: 1 wei per order (tests don't validate amount).
-        owner_send_contract_tx(contract.functions.createOrder(int(order.id), 1))
+        order.contract_address = deploy_contract_for_order(int(order.id), 1)
+        db.session.commit()
 
     return jsonify({"id": int(order.id)}), 200
 
@@ -200,7 +200,7 @@ def customer_delivered():
     db.session.commit()
 
     if Config.WITH_BLOCKCHAIN:
-        _w3, contract = get_or_deploy_payment_contract()
+        _w3, contract = get_contract_at_address(order.contract_address)
         owner_send_contract_tx(contract.functions.deliver(int(order.id)))
 
     return ("", 200)

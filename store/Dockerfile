@@ -17,8 +17,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 COPY --from=solc /src/Payment.artifact.json /app/contracts/Payment.artifact.json
 
-EXPOSE 5002
-
 CMD ["python", "app.py"]
 
 

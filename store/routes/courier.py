@@ -5,7 +5,7 @@ from flask import Blueprint, jsonify, request
 from auth import role_required
 from blockchain import is_valid_address
 from config import Config
-from contract import get_or_deploy_payment_contract, is_order_paid_onchain, owner_send_contract_tx
+from contract import get_contract_at_address, is_order_paid_onchain, owner_send_contract_tx
 from extensions import db
 from models import Order
 
@@ -66,7 +66,7 @@ def pick_up_order():
         order.payment_complete = True
 
         # On-chain pickup (also produces an owner-origin tx for tests).
-        _w3, contract = get_or_deploy_payment_contract()
+        _w3, contract = get_contract_at_address(order.contract_address)
         owner_send_contract_tx(contract.functions.pickUp(int(order.id), address_str))
 
     order.status = "PENDING"

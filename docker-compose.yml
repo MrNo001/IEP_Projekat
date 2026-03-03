@@ -1,5 +1,5 @@
 services:
-  mysql:
+  auth-mysql:
     image: mysql:8.0.36
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
@@ -7,7 +7,7 @@ services:
       MYSQL_USER: auth_user
       MYSQL_PASSWORD: auth_password
     volumes:
-      - mysql_data:/var/lib/mysql
+      - auth_mysql_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-prootpassword"]
       interval: 5s
@@ -31,12 +31,27 @@ services:
       retries: 30
     restart: unless-stopped
 
+  ganache:
+    image: trufflesuite/ganache-cli:v6.12.2
+    command:
+      - "--host=0.0.0.0"
+      - "--port=8545"
+      - "--chainId=1337"
+      - "--networkId=1337"
+      - "--gasPrice=1"
+      - "--account=0xb64be88dd6b89facf295f4fd0dda082efcbe95a2bb4478f5ee582b7efe88cf60,1000000000000000000000"
+    ports:
+      - "8545:8545"
+    restart: unless-stopped
+
   adminer:
     image: adminer:4.8.1
     ports:
       - "8080:8080"
     depends_on:
-      mysql:
+      auth-mysql:
+        condition: service_healthy
+      store-mysql:
         condition: service_healthy
     restart: unless-stopped
 
@@ -44,7 +59,7 @@ services:
     build:
       context: ./authentication
     environment:
-      DATABASE_URL: mysql+pymysql://auth_user:auth_password@mysql:3306/auth_db
+      DATABASE_URL: mysql+pymysql://auth_user:auth_password@auth-mysql:3306/auth_db
       JWT_SECRET: JWT_SECRET_DEV_KEY
       ROLES_FIELD: roles
       ROLE_OWNER: owner
@@ -55,7 +70,7 @@ services:
     ports:
       - "5000:5000"
     depends_on:
-      mysql:
+      auth-mysql:
         condition: service_healthy
     restart: unless-stopped
 
@@ -70,7 +85,9 @@ services:
       ROLE_CUSTOMER: customer
       ROLE_COURIER: courier
       WITH_AUTHENTICATION: "1"
-      WITH_BLOCKCHAIN: "0"
+      WITH_BLOCKCHAIN: "1"
+      PROVIDER_URL: http://ganache:8545
+      OWNER_PRIVATE_KEY: 0xb64be88dd6b89facf295f4fd0dda082efcbe95a2bb4478f5ee582b7efe88cf60
       ALLOW_RESET: "1"
       RESET_TOKEN: "dev"
       SERVICE_MODE: owner
@@ -80,6 +97,8 @@ services:
     depends_on:
       store-mysql:
         condition: service_healthy
+      ganache:
+        condition: service_started
     restart: unless-stopped
 
   customer:
@@ -93,7 +112,9 @@ services:
       ROLE_CUSTOMER: customer
       ROLE_COURIER: courier
       WITH_AUTHENTICATION: "1"
-      WITH_BLOCKCHAIN: "0"
+      WITH_BLOCKCHAIN: "1"
+      PROVIDER_URL: http://ganache:8545
+      OWNER_PRIVATE_KEY: 0xb64be88dd6b89facf295f4fd0dda082efcbe95a2bb4478f5ee582b7efe88cf60
       ALLOW_RESET: "1"
       RESET_TOKEN: "dev"
       SERVICE_MODE: customer
@@ -103,6 +124,8 @@ services:
     depends_on:
       store-mysql:
         condition: service_healthy
+      ganache:
+        condition: service_started
     restart: unless-stopped
 
   courier:
@@ -116,7 +139,9 @@ services:
       ROLE_CUSTOMER: customer
       ROLE_COURIER: courier
       WITH_AUTHENTICATION: "1"
-      WITH_BLOCKCHAIN: "0"
+      WITH_BLOCKCHAIN: "1"
+      PROVIDER_URL: http://ganache:8545
+      OWNER_PRIVATE_KEY: 0xb64be88dd6b89facf295f4fd0dda082efcbe95a2bb4478f5ee582b7efe88cf60
       ALLOW_RESET: "1"
       RESET_TOKEN: "dev"
       SERVICE_MODE: courier
@@ -126,9 +151,10 @@ services:
     depends_on:
       store-mysql:
         condition: service_healthy
+      ganache:
+        condition: service_started
     restart: unless-stopped
 
 volumes:
-  mysql_data:
+  auth_mysql_data:
   store_mysql_data:
-

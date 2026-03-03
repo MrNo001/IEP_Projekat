@@ -60,6 +60,7 @@ class Order(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default = datetime.now());
     
     # Blockchain fields (optional, nullable)
+    contract_address = db.Column(db.String(255), nullable=True)  # one contract per order when WITH_BLOCKCHAIN
     courier_address = db.Column(db.String(255), nullable=True)
     customer_address = db.Column(db.String(255), nullable=True)
     payment_complete = db.Column(db.Boolean, nullable=False, default=False)

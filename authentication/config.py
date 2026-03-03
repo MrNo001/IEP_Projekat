@@ -11,7 +11,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = _env("DATABASE_URL", "sqlite:///dev.db")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # JWT (must match test expectations)
+    # JWT
     JWT_SECRET_KEY = _env("JWT_SECRET", "JWT_SECRET_DEV_KEY")
     JWT_ALGORITHM = "HS256"
     JWT_IDENTITY_CLAIM = "sub"
@@ -26,8 +26,8 @@ class Config:
     ROLE_COURIER = _env("ROLE_COURIER", "courier")
 
     # Dev/test helpers
-    ALLOW_RESET = _env("ALLOW_RESET", "0") == "1"
-    RESET_TOKEN = _env("RESET_TOKEN", "")
+    ALLOW_RESET = _env("ALLOW_RESET", "1") == "1"
+    RESET_TOKEN = _env("RESET_TOKEN", "dev")
 
     PORT = int(_env("PORT", "5000"))
 

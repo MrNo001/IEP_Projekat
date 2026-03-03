@@ -10,8 +10,7 @@ from web3 import HTTPProvider, Web3
 from web3 import Account
 
 from config import Config
-from extensions import db
-from models import BlockchainState
+from models import Order
 
 
 @dataclass(frozen=True)
@@ -47,25 +46,21 @@ def _get_owner_address() -> str:
     return Account.from_key(Config.OWNER_PRIVATE_KEY).address
 
 
-def get_or_deploy_payment_contract() -> Tuple[Web3, Any]:
-    """
-    Returns (web3, contract_instance). Contract address is stored in DB (BlockchainState id=1).
-    """
+def _ensure_blockchain() -> None:
     if not Config.WITH_BLOCKCHAIN:
         raise RuntimeError("Blockchain is disabled")
-
     if not Config.PROVIDER_URL or not Config.OWNER_PRIVATE_KEY:
         raise RuntimeError("Missing PROVIDER_URL / OWNER_PRIVATE_KEY")
 
+
+def deploy_contract_for_order(order_id: int, price_wei: int) -> str:
+    """
+    Deploy a new Payment contract for this order, call createOrder(order_id, price_wei), return contract address.
+    """
+    _ensure_blockchain()
     _wait_for_chain()
     w3 = _web3()
     artifact = _load_artifact()
-
-    state = BlockchainState.query.get(1)
-    if state is not None and state.contract_address:
-        contract = w3.eth.contract(address=state.contract_address, abi=artifact.abi)
-        return w3, contract
-
     owner_address = _get_owner_address()
     nonce = w3.eth.get_transaction_count(owner_address)
     contract_factory = w3.eth.contract(abi=artifact.abi, bytecode=artifact.bytecode)
@@ -78,29 +73,33 @@ def get_or_deploy_payment_contract() -> Tuple[Web3, Any]:
             "chainId": w3.eth.chain_id,
         }
     )
-
     signed = w3.eth.account.sign_transaction(tx, Config.OWNER_PRIVATE_KEY)
     tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
     receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
     address = receipt.contractAddress
-
-    if state is None:
-        state = BlockchainState(id=1, contract_address=address)
-        db.session.add(state)
-    else:
-        state.contract_address = address
-    db.session.commit()
-
     contract = w3.eth.contract(address=address, abi=artifact.abi)
+    owner_send_contract_tx(contract.functions.createOrder(order_id, price_wei))
+    return address
+
+
+def get_contract_at_address(contract_address: str) -> Tuple[Web3, Any]:
+    """Return (web3, contract_instance) for an already-deployed contract."""
+    _ensure_blockchain()
+    _wait_for_chain()
+    w3 = _web3()
+    artifact = _load_artifact()
+    contract = w3.eth.contract(address=contract_address, abi=artifact.abi)
     return w3, contract
 
 
 def owner_send_contract_tx(function_call) -> None:
     """
     Send a state-changing contract tx signed by owner.
-    `function_call` is like contract.functions.createOrder(...)
+    `function_call` is like contract.functions.createOrder(...) or .pickUp(...) or .deliver(...)
     """
-    w3, _ = get_or_deploy_payment_contract()
+    _ensure_blockchain()
+    _wait_for_chain()
+    w3 = _web3()
     owner_address = _get_owner_address()
     nonce = w3.eth.get_transaction_count(owner_address)
     tx = function_call.build_transaction(
@@ -118,7 +117,10 @@ def owner_send_contract_tx(function_call) -> None:
 
 
 def build_customer_pay_tx(order_id: int, customer_address: str, value_wei: int) -> Dict[str, Any]:
-    w3, contract = get_or_deploy_payment_contract()
+    order = Order.query.get(order_id)
+    if not order or not order.contract_address:
+        raise RuntimeError("Order or contract address not found")
+    w3, contract = get_contract_at_address(order.contract_address)
     nonce = w3.eth.get_transaction_count(customer_address)
     tx = contract.functions.pay(order_id).build_transaction(
         {
@@ -134,7 +136,8 @@ def build_customer_pay_tx(order_id: int, customer_address: str, value_wei: int) 
 
 
 def is_order_paid_onchain(order_id: int) -> bool:
-    _w3, contract = get_or_deploy_payment_contract()
+    order = Order.query.get(order_id)
+    if not order or not order.contract_address:
+        return False
+    _w3, contract = get_contract_at_address(order.contract_address)
     return bool(contract.functions.isPaid(order_id).call())
-
-
