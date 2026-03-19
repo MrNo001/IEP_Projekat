@@ -10,6 +10,7 @@ from models import BlockchainState, Category, Order, OrderItem, Product
 from routes.blockchain_interface import bp as blockchain_interface_bp
 from routes.courier import bp as courier_bp
 from routes.customer import bp as customer_bp
+from routes.product_stats import bp as product_stats_bp
 from routes.owner import bp as owner_bp
 
 
@@ -85,6 +86,8 @@ def _register_blueprints(app: Flask) -> None:
         app.register_blueprint(owner_bp)
         app.register_blueprint(customer_bp)
         app.register_blueprint(courier_bp)
+    elif mode == "stats":
+        app.register_blueprint(product_stats_bp)
     else:
         # default: customer
         app.register_blueprint(customer_bp)
