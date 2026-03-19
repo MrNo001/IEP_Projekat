@@ -45,7 +45,7 @@ def pick_up_order():
     if order is None:
         return jsonify({"message": "Invalid order id."}), 400
 
-    # Can only pick up undelivered & not-yet-picked-up orders.
+
     if order.status != "CREATED":
         return jsonify({"message": "Invalid order id."}), 400
 
@@ -65,7 +65,6 @@ def pick_up_order():
         order.courier_address = address_str
         order.payment_complete = True
 
-        # On-chain pickup (one contract per order).
         _w3, contract = get_contract_at_address(order.contract_address)
         owner_send_contract_tx(contract.functions.pickUp(address_str))
 

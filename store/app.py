@@ -33,10 +33,14 @@ def _wait_for_db(max_attempts: int = 60, sleep_seconds: float = 1.0) -> None:
     raise RuntimeError("Database not reachable") from last_err
 
 
+
+
 def _init_db() -> None:
     with app.app_context():
         _wait_for_db()
         db.create_all()
+
+
 
 
 @app.get("/")
@@ -53,10 +57,6 @@ def health():
 
 @app.post("/__reset")
 def reset_store_db():
-    """
-    Dev-only helper: drop and recreate all store tables.
-    Enabled only when ALLOW_RESET=1. Optional RESET_TOKEN via X-Reset-Token header.
-    """
     if not Config.ALLOW_RESET:
         return ("", 404)
 
@@ -72,10 +72,14 @@ def reset_store_db():
     return ("", 200)
 
 
+
+
+
+
 def _register_blueprints(app: Flask) -> None:
     mode = Config.SERVICE_MODE.lower().strip()
 
-    # Blockchain interface for personal/testing (balance, create account, send wei)
+    # Blockchain interface 
     app.register_blueprint(blockchain_interface_bp)
 
     if mode == "owner":
@@ -89,11 +93,11 @@ def _register_blueprints(app: Flask) -> None:
     elif mode == "stats":
         app.register_blueprint(product_stats_bp)
     else:
-        # default: customer
         app.register_blueprint(customer_bp)
 
 
 _register_blueprints(app)
+
 
 
 if __name__ == "__main__":

@@ -1,18 +1,16 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import Any, Callable, TypeVar, cast
+from typing import Any, Callable
 
 from flask import jsonify
 from flask_jwt_extended import get_jwt, verify_jwt_in_request
 
 from config import Config
 
-F = TypeVar("F", bound=Callable[..., Any])
 
 
 def unauthorized_response():
-    # Tests expect this exact payload for missing header AND for wrong role.
     return jsonify({"msg": "Missing Authorization Header"}), 401
 
 
@@ -35,20 +33,10 @@ def register_jwt_error_handlers(jwt_manager) -> None:
         return unauthorized_response()
 
 
-def role_required(required_role: str) -> Callable[[F], F]:
-    """
-    Enforce:
-    - If WITH_AUTHENTICATION=0 -> no-op (allow).
-    - Otherwise require a valid JWT and required_role in token claim Config.ROLES_FIELD.
-    For any failure, respond with 401 + {"msg":"Missing Authorization Header"} (test expectation).
-    """
-
-    def decorator(fn: F) -> F:
+def role_required(required_role: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(fn)
-        def wrapper(*args: Any, **kwargs: Any):
-            if not Config.WITH_AUTHENTICATION:
-                return fn(*args, **kwargs)
-
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             try:
                 verify_jwt_in_request()
                 claims = get_jwt() or {}
@@ -64,13 +52,9 @@ def role_required(required_role: str) -> Callable[[F], F]:
                 if required_role not in roles:
                     return unauthorized_response()
             except Exception:
-                # Includes missing header / invalid token / decode failures.
                 return unauthorized_response()
-
             return fn(*args, **kwargs)
-
-        return cast(F, wrapper)
-
+        return wrapper
     return decorator
 
 

@@ -1,15 +1,4 @@
-"""
-Blockchain interface routes for personal/testing use: check balances,
-create accounts, send wei. Use to verify that wei was successfully
-transmitted via the Payment contract (e.g. after pay() or owner withdrawals).
 
-Account indexes: The chain does not assign indexes to accounts. The "index"
-(reflected in fund_from_account_index and in GET /blockchain/accounts) is
-the position in the list returned by the RPC eth_accounts. Dev nodes
-(Ganache, Hardhat, etc.) pre-create a fixed set of accounts and expose them
-via eth_accounts; index 0 is the first, index 1 the second, etc. On
-mainnet or nodes that don't manage keys, eth_accounts is often empty.
-"""
 from __future__ import annotations
 
 import secrets
@@ -32,11 +21,7 @@ def _web3() -> Web3:
 
 @bp.get("/owner")
 def get_owner_address():
-    """
-    GET /blockchain/owner
-    Returns the owner address derived from Config.OWNER_PRIVATE_KEY.
-    Useful when you have the key but don't know the corresponding address.
-    """
+
     if not Config.OWNER_PRIVATE_KEY:
         return jsonify({"error": "OWNER_PRIVATE_KEY not configured"}), 400
     pk = Config.OWNER_PRIVATE_KEY.strip()
@@ -51,15 +36,7 @@ def get_owner_address():
 
 @bp.get("/test-accounts")
 def list_test_accounts_and_balances():
-    """
-    GET /blockchain/test-accounts
-    Returns addresses + balances for the accounts used in blockchain tests:
-      - Ganache dev/faucet account: w3.eth.accounts[0] (if present)
-      - Owner account: derived from Config.OWNER_PRIVATE_KEY
-      - Customer + courier addresses currently stored in Order rows
 
-    This is intended for dev/personal testing, not production usage.
-    """
     try:
         w3 = _web3()
 
@@ -112,12 +89,7 @@ def list_test_accounts_and_balances():
 
 @bp.get("/accounts")
 def list_accounts():
-    """
-    GET /blockchain/accounts
-    Returns all addresses known to the node (eth_accounts) and their wei
-    balance. Only dev nodes (Ganache, Hardhat, etc.) typically expose a
-    non-empty list; production nodes often return [].
-    """
+
     try:
         w3 = _web3()
         addresses = w3.eth.accounts
@@ -137,10 +109,7 @@ def list_accounts():
 
 @bp.get("/balance")
 def get_balance():
-    """
-    GET /blockchain/balance?address=0x...
-    Returns wei balance for the given address.
-    """
+
     address = request.args.get("address")
     if not address:
         return jsonify({"error": "Missing query parameter: address"}), 400
@@ -160,12 +129,7 @@ def get_balance():
 
 @bp.post("/account")
 def create_account():
-    """
-    POST /blockchain/account
-    Creates a new account (address + private_key). For testing only.
-    Optionally pass JSON { "fund_from_account_index": 0, "fund_wei": 1000000 }
-    to fund the new account from the provider's accounts[0] (e.g. dev chain).
-    """
+
     body = request.get_json(silent=True) or {}
     fund_index = body.get("fund_from_account_index")
     fund_wei = body.get("fund_wei")
@@ -201,12 +165,7 @@ def create_account():
 
 @bp.post("/send")
 def send_wei():
-    """
-    POST /blockchain/send
-    JSON: { "from_private_key": "0x...", "to_address": "0x...", "value_wei": 123 }
-    Sends value_wei from the account derived from from_private_key to to_address.
-    Returns tx hash and receipt status.
-    """
+
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "JSON body required"}), 400
@@ -250,10 +209,7 @@ def send_wei():
 
 @bp.get("/transaction/<tx_hash>")
 def get_transaction(tx_hash: str):
-    """
-    GET /blockchain/transaction/<tx_hash>
-    Returns transaction and receipt for the given hash (for debugging).
-    """
+     
     if not tx_hash or not tx_hash.startswith("0x"):
         return jsonify({"error": "Invalid tx hash"}), 400
     try:

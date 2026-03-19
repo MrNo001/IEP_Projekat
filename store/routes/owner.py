@@ -10,7 +10,6 @@ from config import Config
 from extensions import db
 from models import Category, Order, OrderItem, Product, product_categories
 
-
 bp = Blueprint("owner", __name__)
 
 
@@ -26,7 +25,7 @@ def owner_update():
 
     parsed_rows: list[tuple[int, list[str], str, Decimal]] = []
 
-    # IMPORTANT (tests): validate CSV structure/price FIRST, and only then check duplicates.
+    # IMPORTANT: Validate CSV structure/price FIRST, and only then check duplicates.
     for idx, line in enumerate(lines):
         parts = line.split(",")
         if len(parts) != 3:
@@ -45,7 +44,7 @@ def owner_update():
         category_names = [c.strip() for c in categories_raw.split("|") if c.strip()]
         parsed_rows.append((idx, category_names, product_name, price))
 
-    # Only after file format/price validation succeeds, enforce unique product names vs DB.
+
     for _idx, _category_names, product_name, _price in parsed_rows:
         existing = Product.query.filter_by(name=product_name).first()
         if existing is not None:
@@ -66,6 +65,8 @@ def owner_update():
 
     db.session.commit()
     return ("", 200)
+
+
 
 
 @bp.get("/product_statistics")
@@ -125,5 +126,68 @@ def category_statistics():
     sorted_names = [name for (name, _sold) in sorted(rows, key=lambda r: (-int(r[1]), r[0]))]
 
     return jsonify({"statistics": sorted_names}), 200
+
+
+
+# @bp.get("/product_statistics")
+# @role_required(Config.ROLE_OWNER)
+# def product_statistics():
+#     # Fetch order rows with product name, status, and quantity.
+#     rows = (
+#         db.session.query(Product.name, Order.status, OrderItem.quantity)
+#         .join(OrderItem, OrderItem.product_id == Product.id)
+#         .join(Order, OrderItem.order_id == Order.id)
+#         .all()
+#     )
+
+#     # Build per-product counters.
+#     by_product: dict[str, dict[str, int]] = {}
+#     for name, status, quantity in rows:
+#         if name not in by_product:
+#             by_product[name] = {"sold": 0, "waiting": 0}
+
+#         if status == "COMPLETE":
+#             by_product[name]["sold"] += int(quantity)
+#         else:
+#             by_product[name]["waiting"] += int(quantity)
+
+#     # Convert counters into response format.
+#     statistics = []
+#     for name, counters in by_product.items():
+#         statistics.append(
+#             {"name": name, "sold": counters["sold"], "waiting": counters["waiting"]}
+#         )
+
+#     return jsonify({"statistics": statistics}), 200
+
+
+# @bp.get("/category_statistics")
+# @role_required(Config.ROLE_OWNER)
+# def category_statistics():
+#     # Load all categories so empty categories are still included.
+#     categories = Category.query.all()
+#     sold_by_category: dict[str, int] = {category.name: 0 for category in categories}
+
+#     # Load only sold order items (from COMPLETE orders).
+#     sold_items = (
+#         OrderItem.query.join(Order, OrderItem.order_id == Order.id)
+#         .filter(Order.status == "COMPLETE")
+#         .all()
+#     )
+
+#     # Add sold quantity to every category of each sold product.
+#     for item in sold_items:
+#         for category in item.product.categories.all():
+#             sold_by_category[category.name] += int(item.quantity)
+
+#     # Sort by sold desc, then category name asc.
+#     sorted_names = [
+#         name
+#         for name, _sold in sorted(
+#             sold_by_category.items(), key=lambda row: (-row[1], row[0])
+#         )
+#     ]
+
+#     return jsonify({"statistics": sorted_names}), 200
 
 

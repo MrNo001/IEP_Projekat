@@ -54,10 +54,10 @@ def _ensure_blockchain() -> None:
 
 
 def deploy_contract_for_order(order_id: int, price_wei: int, customer_address: str) -> str:
-    """
-    Deploy a new Payment contract for this order, call initialize(price_wei, customer_address).
-    Price in wei must be order_total_price * 100 (per spec). Returns contract address.
-    """
+
+    #Deploy a new Payment contract for the order.
+    #Returns contract address.
+
     _ensure_blockchain()
     _wait_for_chain()
     w3 = _web3()
@@ -84,7 +84,7 @@ def deploy_contract_for_order(order_id: int, price_wei: int, customer_address: s
 
 
 def get_contract_at_address(contract_address: str) -> Tuple[Web3, Any]:
-    """Return (web3, contract_instance) for an already-deployed contract."""
+    #Return (web3, contract_instance) for an already-deployed contract.
     _ensure_blockchain()
     _wait_for_chain()
     w3 = _web3()
@@ -94,10 +94,7 @@ def get_contract_at_address(contract_address: str) -> Tuple[Web3, Any]:
 
 
 def owner_send_contract_tx(function_call) -> None:
-    """
-    Send a state-changing contract tx signed by owner.
-    `function_call` is like contract.functions.initialize(...) or .pickUp(...) or .deliver(...)
-    """
+    
     _ensure_blockchain()
     _wait_for_chain()
     w3 = _web3()

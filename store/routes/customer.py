@@ -128,7 +128,7 @@ def customer_order():
     order.total_price = total
     db.session.commit()
 
-    # Blockchain: deploy a new contract for this order (price in wei = order_price * 100 per spec).
+    # Price in wei = order_price * 100 per spec.
     if Config.WITH_BLOCKCHAIN:
         price_wei = int(float(order.total_price) * 100)
         order.contract_address = deploy_contract_for_order(
@@ -232,7 +232,7 @@ def customer_generate_invoice():
     if not is_valid_address(address_str):
         return jsonify({"message": "Invalid address."}), 400
 
-    # Blockchain mode: return a contract-call transaction for customer to sign and broadcast.
+    # Return a contract-call transaction for customer to sign and broadcast.
     if Config.WITH_BLOCKCHAIN:
         if is_order_paid_onchain(int(order.id)):
             return jsonify({"message": "Transfer already complete."}), 400
@@ -244,7 +244,7 @@ def customer_generate_invoice():
         invoice_tx = build_customer_pay_tx(int(order.id), address_str, price_wei)
         return jsonify({"invoice": invoice_tx}), 200
 
-    # Non-blockchain fallback (should not be used by non-blockchain tests)
+    # Fallback
     if order.payment_complete:
         return jsonify({"message": "Transfer already complete."}), 400
 

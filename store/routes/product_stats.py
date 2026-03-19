@@ -27,11 +27,8 @@ def _parse_limit(default: int = 5, max_limit: int = 50) -> int | None:
 @bp.get("/summary")
 @role_required(Config.ROLE_OWNER)
 def summary():
-    """
-    GET /product_stats/summary
-    Returns per-product sold/waiting quantities and simple revenue stats.
-    "Sold" = Order.status == "COMPLETE".
-    """
+    # Get per-product sold/waiting quantities and simple revenue stats.
+    # "Sold" = Order.status == "COMPLETE".
     sold_qty_expr = func.coalesce(
         func.sum(case((Order.status == "COMPLETE", OrderItem.quantity), else_=0)),
         0,
@@ -92,10 +89,8 @@ def summary():
 @bp.get("/top_sold")
 @role_required(Config.ROLE_OWNER)
 def top_sold():
-    """
-    GET /product_stats/top_sold?limit=5
-    Top products by sold quantity.
-    """
+
+    # Top products by sold quantity.
     limit = _parse_limit()
     if limit is None:
         return jsonify({"error": "Invalid query param: limit"}), 400
@@ -133,10 +128,9 @@ def top_sold():
 @bp.get("/top_revenue")
 @role_required(Config.ROLE_OWNER)
 def top_revenue():
-    """
-    GET /product_stats/top_revenue?limit=5
-    Top products by revenue from COMPLETE orders.
-    """
+
+    # Top products by revenue from COMPLETE orders.
+
     limit = _parse_limit()
     if limit is None:
         return jsonify({"error": "Invalid query param: limit"}), 400
