@@ -7,6 +7,7 @@ from config import Config
 from auth import register_jwt_error_handlers
 from extensions import db, jwt
 from models import BlockchainState, Category, Order, OrderItem, Product  
+from routes.blockchain_interface import bp as blockchain_interface_bp
 from routes.courier import bp as courier_bp
 from routes.customer import bp as customer_bp
 from routes.owner import bp as owner_bp
@@ -72,6 +73,9 @@ def reset_store_db():
 
 def _register_blueprints(app: Flask) -> None:
     mode = Config.SERVICE_MODE.lower().strip()
+
+    # Blockchain interface for personal/testing (balance, create account, send wei)
+    app.register_blueprint(blockchain_interface_bp)
 
     if mode == "owner":
         app.register_blueprint(owner_bp)

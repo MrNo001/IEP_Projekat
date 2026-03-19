@@ -53,9 +53,10 @@ def _ensure_blockchain() -> None:
         raise RuntimeError("Missing PROVIDER_URL / OWNER_PRIVATE_KEY")
 
 
-def deploy_contract_for_order(order_id: int, price_wei: int) -> str:
+def deploy_contract_for_order(order_id: int, price_wei: int, customer_address: str) -> str:
     """
-    Deploy a new Payment contract for this order, call createOrder(order_id, price_wei), return contract address.
+    Deploy a new Payment contract for this order, call initialize(price_wei, customer_address).
+    Price in wei must be order_total_price * 100 (per spec). Returns contract address.
     """
     _ensure_blockchain()
     _wait_for_chain()
@@ -78,7 +79,7 @@ def deploy_contract_for_order(order_id: int, price_wei: int) -> str:
     receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
     address = receipt.contractAddress
     contract = w3.eth.contract(address=address, abi=artifact.abi)
-    owner_send_contract_tx(contract.functions.createOrder(order_id, price_wei))
+    owner_send_contract_tx(contract.functions.initialize(price_wei, customer_address))
     return address
 
 
@@ -95,7 +96,7 @@ def get_contract_at_address(contract_address: str) -> Tuple[Web3, Any]:
 def owner_send_contract_tx(function_call) -> None:
     """
     Send a state-changing contract tx signed by owner.
-    `function_call` is like contract.functions.createOrder(...) or .pickUp(...) or .deliver(...)
+    `function_call` is like contract.functions.initialize(...) or .pickUp(...) or .deliver(...)
     """
     _ensure_blockchain()
     _wait_for_chain()
@@ -122,7 +123,7 @@ def build_customer_pay_tx(order_id: int, customer_address: str, value_wei: int) 
         raise RuntimeError("Order or contract address not found")
     w3, contract = get_contract_at_address(order.contract_address)
     nonce = w3.eth.get_transaction_count(customer_address)
-    tx = contract.functions.pay(order_id).build_transaction(
+    tx = contract.functions.pay().build_transaction(
         {
             "from": customer_address,
             "nonce": nonce,
@@ -140,4 +141,4 @@ def is_order_paid_onchain(order_id: int) -> bool:
     if not order or not order.contract_address:
         return False
     _w3, contract = get_contract_at_address(order.contract_address)
-    return bool(contract.functions.isPaid(order_id).call())
+    return bool(contract.functions.isPaid().call())

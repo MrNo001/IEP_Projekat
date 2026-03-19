@@ -82,7 +82,7 @@ parser.add_argument (
 
 parser.add_argument (
         "--owner-private-key",
-        help = "Owners private key"
+        help = "Owner's private key (required for blockchain tests). The owner is the fixed backend identity that deploys contracts and sends owner txs; customer and courier are ephemeral test accounts generated per run, so only the owner key is supplied.)"
 )
 
 helpText = r""" 

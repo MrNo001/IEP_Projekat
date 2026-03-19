@@ -65,9 +65,9 @@ def pick_up_order():
         order.courier_address = address_str
         order.payment_complete = True
 
-        # On-chain pickup (also produces an owner-origin tx for tests).
+        # On-chain pickup (one contract per order).
         _w3, contract = get_contract_at_address(order.contract_address)
-        owner_send_contract_tx(contract.functions.pickUp(int(order.id), address_str))
+        owner_send_contract_tx(contract.functions.pickUp(address_str))
 
     order.status = "PENDING"
     db.session.commit()

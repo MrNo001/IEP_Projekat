@@ -128,10 +128,12 @@ def customer_order():
     order.total_price = total
     db.session.commit()
 
-    # Blockchain: deploy a new contract for this order and record its address.
+    # Blockchain: deploy a new contract for this order (price in wei = order_price * 100 per spec).
     if Config.WITH_BLOCKCHAIN:
-        # Keep it simple: 1 wei per order (tests don't validate amount).
-        order.contract_address = deploy_contract_for_order(int(order.id), 1)
+        price_wei = int(float(order.total_price) * 100)
+        order.contract_address = deploy_contract_for_order(
+            int(order.id), price_wei, str(data.get("address"))
+        )
         db.session.commit()
 
     return jsonify({"id": int(order.id)}), 200
@@ -201,7 +203,7 @@ def customer_delivered():
 
     if Config.WITH_BLOCKCHAIN:
         _w3, contract = get_contract_at_address(order.contract_address)
-        owner_send_contract_tx(contract.functions.deliver(int(order.id)))
+        owner_send_contract_tx(contract.functions.deliver())
 
     return ("", 200)
 
@@ -238,7 +240,8 @@ def customer_generate_invoice():
         order.customer_address = address_str
         db.session.commit()
 
-        invoice_tx = build_customer_pay_tx(int(order.id), address_str, 1)
+        price_wei = int(float(order.total_price) * 100)
+        invoice_tx = build_customer_pay_tx(int(order.id), address_str, price_wei)
         return jsonify({"invoice": invoice_tx}), 200
 
     # Non-blockchain fallback (should not be used by non-blockchain tests)
